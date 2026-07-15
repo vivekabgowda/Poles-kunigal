@@ -87,8 +87,10 @@ td{padding:9px 14px;border-top:1px solid var(--border-light)}
 .pill.amber{background:#fffbeb;color:var(--warning)}
 
 /* modal */
-.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto}
-.modal{background:#fff;border-radius:14px;width:560px;max-width:100%;margin-bottom:40px}
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px 12px;overscroll-behavior:contain}
+.modal{background:#fff;border-radius:14px;width:560px;max-width:100%;display:flex;flex-direction:column;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px)}
+.modal-body{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1}
+.modal-header,.modal-footer{flex-shrink:0}
 .modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
 .modal-header h3{font-size:15px;font-weight:700}
 .modal-body{padding:16px 18px}
@@ -194,6 +196,7 @@ let cache = { production:[], orders:[], materials:[], advances:[], gst_invoices:
 let listeners = [];
 let salesTab = 'orders';
 let advTab = 'labour';
+let advMonth = ''; // '' = all months, else 'YYYY-MM'
 let gstFromDate = '', gstToDate = '', gstInvoiceFilter = '';
 let _gstRowSeq = 0;
 
@@ -203,6 +206,13 @@ function fmt(n){ n = Math.round(Number(n)||0); return n.toLocaleString('en-IN');
 function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmtDate(s){ if(!s) return '—'; const d=new Date(s+'T00:00:00'); return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+// Surface any silent async failure (e.g. Firestore permission-denied) instead of failing invisibly
+window.addEventListener('unhandledrejection', e => {
+  const msg = (e.reason && e.reason.message) || String(e.reason||'Unknown error');
+  if(/permission|denied|insufficient/i.test(msg)) alert('Database permission error: '+msg+'\n\nOpen Firebase console → Firestore → Rules and allow signed-in users (see setup steps).');
+  else if(/network|unavailable|offline/i.test(msg)) console.warn('Network issue:', msg);
+  else alert('Error: '+msg);
+});
 function col(name){ return firestoreDb.collection(COL_PREFIX+name); }
 function modal(html){ document.getElementById('modal-container').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()">${html}</div>`; }
 function closeModal(){ document.getElementById('modal-container').innerHTML=''; }
@@ -408,9 +418,64 @@ function renderSales(){
     <div class="tab-bar">
       <button class="tab ${salesTab==='orders'?'active':''}" onclick="salesTab='orders';renderSales()">Orders</button>
       <button class="tab ${salesTab==='customers'?'active':''}" onclick="salesTab='customers';renderSales()">Customers</button>
+      <button class="tab ${salesTab==='due'?'active':''}" onclick="salesTab='due';renderSales()">Balance Due</button>
     </div>
     <div id="sales-panel"></div>`;
-  if(salesTab==='orders') renderOrdersTab(); else renderCustomersTab();
+  if(salesTab==='orders') renderOrdersTab();
+  else if(salesTab==='due') renderDueTab();
+  else renderCustomersTab();
+}
+
+function renderDueTab(){
+  const dueOrders = cache.orders.filter(o=>(Number(o.balance)||0) > 0)
+    .sort((a,b)=>(a.orderDate||'').localeCompare(b.orderDate||'')); // oldest first — chase these
+  const totalDue = dueOrders.reduce((s,o)=>s+(Number(o.balance)||0),0);
+  // Group by customer for the summary cards
+  const byCust = {};
+  dueOrders.forEach(o=>{
+    const k=(o.customer||'').trim().toLowerCase(); if(!k) return;
+    if(!byCust[k]) byCust[k]={name:(o.customer||'').trim(), phone:o.phone||'', due:0, orders:0, oldest:o.orderDate||''};
+    byCust[k].due += Number(o.balance)||0; byCust[k].orders++;
+  });
+  const custs = Object.values(byCust).sort((a,b)=>b.due-a.due);
+  document.getElementById('sales-panel').innerHTML = `
+    <div class="stat-card" style="margin-bottom:1rem"><div class="stat-label">Total outstanding (${custs.length} customer${custs.length===1?'':'s'}, ${dueOrders.length} sale${dueOrders.length===1?'':'s'})</div>
+      <div class="stat-value" style="color:var(--warning)">₹${fmt(totalDue)}</div></div>
+    ${dueOrders.length===0?`<div class="card empty-state"><i class="ti ti-circle-check"></i>No pending balances — everyone has paid ✓</div>`:`
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>Customer</th><th>Since</th><th>Poles</th><th style="text-align:right">Total</th><th style="text-align:right">Balance due</th><th></th></tr></thead>
+        <tbody>${dueOrders.map(o=>{
+          const days = Math.floor((new Date(today()) - new Date(o.orderDate||today()))/86400000);
+          return `<tr>
+          <td style="font-weight:600">${esc(o.customer)}${o.phone?`<div style="font-size:11px;color:var(--muted)">${esc(o.phone)}</div>`:''}</td>
+          <td style="white-space:nowrap;font-size:12px">${fmtDate(o.orderDate)}${days>0?`<div style="font-size:11px;color:${days>30?'var(--danger)':'var(--muted)'}">${days} days</div>`:''}</td>
+          <td style="font-size:12px">${POLE_TYPES.filter(t=>(o.poles||{})[t]>0).map(t=>`${t}×${o.poles[t]}`).join(', ')||'—'}</td>
+          <td style="text-align:right">₹${fmt(o.total)}</td>
+          <td style="text-align:right;font-weight:700;color:var(--warning)">₹${fmt(o.balance)}</td>
+          <td style="text-align:right;white-space:nowrap">
+            ${o.phone?`<button class="btn-sm" style="color:#16a34a;border-color:#16a34a" onclick="remindBalance('${o.id}')" title="Send WhatsApp reminder"><i class="ti ti-brand-whatsapp"></i> Remind</button>`:''}
+            <button class="btn-sm" onclick="openPayModal('${o.id}')">Pay</button>
+          </td>
+        </tr>`;}).join('')}</tbody></table></div>
+    </div>`}`;
+}
+
+function remindBalance(orderId){
+  const o = cache.orders.find(x=>x.id===orderId);
+  if(!o) return;
+  const p = cache.gst_profile||{};
+  const factoryPhone = p.phone ? p.phone.split(/[\n,]/).map(l=>l.trim()).filter(Boolean).join(' / ') : '';
+  const poleList = POLE_TYPES.filter(t=>(o.poles||{})[t]>0).map(t=>`${t} × ${o.poles[t]}`).join(', ');
+  const text = [
+    `*BKN ELECTRIC POLES, Kunigal*${factoryPhone?' — Ph: '+factoryPhone:''}`,
+    ``,
+    `Namaskara ${o.customer},`,
+    `Gentle reminder — balance of *₹${fmt(o.balance)}* is pending for poles purchased on ${fmtDate(o.orderDate)} (${poleList}).`,
+    `Kindly arrange the payment. Thank you 🙏`,
+  ].join('\n');
+  const firstPhone = (o.phone||'').split(',')[0].replace(/\D/g,'');
+  window.open(`https://wa.me/91${firstPhone}?text=${encodeURIComponent(text)}`, '_blank');
 }
 function renderOrdersTab(){
   const list = [...cache.orders].sort((a,b)=>(b.orderDate||'').localeCompare(a.orderDate||''));
@@ -426,6 +491,7 @@ function renderOrdersTab(){
           <td style="text-align:right;font-weight:700;color:${(o.balance||0)>0?'var(--warning)':'var(--success)'}">${(o.balance||0)>0?'₹'+fmt(o.balance):'✓ Paid'}</td>
           <td>${o.status==='delivered'?'<span class="pill green">Delivered</span>':'<span class="pill amber">Pending</span>'}</td>
           <td style="text-align:right;white-space:nowrap">
+            <button class="btn-sm" style="color:#16a34a;border-color:#16a34a" onclick="shareSale('${o.id}')" title="Send receipt on WhatsApp"><i class="ti ti-brand-whatsapp"></i></button>
             ${(o.balance||0)>0?`<button class="btn-sm" onclick="openPayModal('${o.id}')">Pay</button>`:''}
             ${o.status!=='delivered'?`<button class="btn-sm" style="color:var(--success);border-color:var(--success)" onclick="markDelivered('${o.id}')">Deliver</button>`:''}
             <button class="btn-sm" onclick="openOrderModal('${o.id}')">Edit</button>
@@ -552,10 +618,41 @@ async function saveOrder(id){
     status: old?(old.status||'pending'):'pending',
     notes: document.getElementById('o-notes').value.trim(),
   };
-  await col('orders').doc(id||uid()).set(data);
-  closeModal();
+  const btn = document.querySelector('.modal-footer .btn-primary');
+  if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
+  try {
+    await col('orders').doc(id||uid()).set(data);
+    closeModal();
+  } catch(e) {
+    alert('Save failed: '+e.message+'\n\nIf it says "permission denied" — check Firestore Rules in Firebase console (must allow signed-in users).');
+    if(btn){ btn.disabled=false; btn.textContent='Save sale'; }
+  }
 }
 async function delOrder(id){ if(confirm('Delete this sale?')) await col('orders').doc(id).delete(); }
+
+function shareSale(orderId){
+  const o = cache.orders.find(x=>x.id===orderId);
+  if(!o) return;
+  const p = cache.gst_profile||{};
+  const factoryPhone = p.phone ? p.phone.split(/[\n,]/).map(l=>l.trim()).filter(Boolean).join(' / ') : '';
+  const poleList = POLE_TYPES.filter(t=>(o.poles||{})[t]>0).map(t=>`${t} × ${o.poles[t]}`).join(', ');
+  const text = [
+    `*BKN ELECTRIC POLES, Kunigal*${factoryPhone?' — Ph: '+factoryPhone:''}`,
+    ``,
+    `Customer: ${o.customer}${o.phone?' ('+o.phone+')':''}`,
+    `Poles: ${poleList||'—'}`,
+    `Total: ₹${fmt(o.total)} | Advance: ₹${fmt(o.advance)} | Balance: ₹${fmt(o.balance)}`,
+    `Date: ${fmtDate(o.orderDate)}`,
+    o.status==='delivered' ? `Status: Delivered ✓` : false,
+    o.notes ? `Note: ${o.notes}` : false,
+  ].filter(s=>s!==false&&s!==undefined&&s!==null).join('\n');
+  // Open directly to the customer's WhatsApp (first number if multiple)
+  const firstPhone = (o.phone||'').split(',')[0].replace(/\D/g,'');
+  const waUrl = firstPhone
+    ? `https://wa.me/91${firstPhone}?text=${encodeURIComponent(text)}`
+    : `https://wa.me/?text=${encodeURIComponent(text)}`;
+  window.open(waUrl, '_blank');
+}
 async function markDelivered(id){
   const o = cache.orders.find(x=>x.id===id); if(!o) return;
   await col('orders').doc(id).update({ status:'delivered', deliveredDate: today() });
@@ -686,15 +783,33 @@ function renderAdvances(){
     </div>
     <div id="adv-panel"></div>`;
   const type = advTab;
-  const list = cache.advances.filter(a=>a.type===type).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const allOfType = cache.advances.filter(a=>a.type===type).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  // Month dropdown from months that have entries
+  const monthCounts = {};
+  allOfType.forEach(a=>{ const ym=(a.date||'').slice(0,7); if(ym) monthCounts[ym]=(monthCounts[ym]||0)+1; });
+  const months = Object.keys(monthCounts).sort().reverse();
+  if(advMonth && !monthCounts[advMonth]) advMonth = '';
+  const monthOpts = `<option value="">All months</option>` + months.map(ym=>{
+    const [y,m]=ym.split('-').map(Number);
+    const label = new Date(y,m-1,1).toLocaleString('en-IN',{month:'long',year:'numeric'});
+    return `<option value="${ym}" ${advMonth===ym?'selected':''}>${label} (${monthCounts[ym]})</option>`;
+  }).join('');
+  const list = advMonth ? allOfType.filter(a=>(a.date||'').startsWith(advMonth)) : allOfType;
   const byPerson = {};
   list.forEach(a=>{ const k=(a.person||'').trim(); byPerson[k]=(byPerson[k]||0)+(Number(a.amount)||0); });
   const persons = type==='partner' ? PARTNERS : Object.keys(byPerson).sort();
+  const monTotal = list.reduce((s,a)=>s+(Number(a.amount)||0),0);
+  const cardNote = advMonth ? 'this month' : 'net taken (all time)';
   document.getElementById('adv-panel').innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:600;color:var(--muted)">Month:</span>
+      <select style="font-size:13px;padding:6px 10px;font-weight:600" onchange="advMonth=this.value;renderAdvances()">${monthOpts}</select>
+      ${advMonth?`<span style="font-size:12.5px;color:var(--muted)">Total this month: <strong style="color:var(--warning)">₹${fmt(monTotal)}</strong></span>`:''}
+    </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:1rem">
       ${persons.map(p=>`<div class="stat-card"><div class="stat-label">${esc(p||'—')}</div>
         <div class="stat-value" style="font-size:17px;color:${(byPerson[p]||0)>0?'var(--warning)':'var(--success)'}">₹${fmt(byPerson[p]||0)}</div>
-        <div style="font-size:11px;color:var(--muted)">net taken</div></div>`).join('') || ''}
+        <div style="font-size:11px;color:var(--muted)">${cardNote}</div></div>`).join('') || ''}
     </div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Tip: record a repayment as a <strong>negative amount</strong> (e.g. -5000) — totals adjust automatically.</div>
     <div class="card" style="padding:0;overflow:hidden">
