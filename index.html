@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#7c2d12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BKN Poles">
+<meta name="mobile-web-app-capable" content="yes">
+<title>BKN Electric Poles — Kunigal</title>
+<script>
+(function(){
+  const manifest = {
+    name: "BKN Electric Poles",
+    short_name: "BKN Poles",
+    start_url: "./",
+    display: "standalone",
+    background_color: "#fff7ed",
+    theme_color: "#7c2d12",
+    icons: [{
+      src: "data:image/svg+xml;base64," + btoa('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="32" fill="#7c2d12"/><text x="96" y="130" font-size="110" text-anchor="middle" fill="white" font-family="sans-serif" font-weight="bold">EP</text></svg>'),
+      sizes: "192x192",
+      type: "image/svg+xml"
+    }]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = URL.createObjectURL(blob);
+  document.currentScript.parentNode.appendChild(link);
+})();
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#7c2d12; --brand-light:#fff7ed; --brand-mid:#ea580c;
+  --bg:#f8fafc; --card:#ffffff; --text:#0f172a; --muted:#64748b;
+  --border:#e2e8f0; --border-light:#f1f5f9;
+  --success:#16a34a; --success-bg:#f0fdf4; --danger:#dc2626; --danger-bg:#fef2f2; --warning:#d97706;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+button{font-family:var(--font);cursor:pointer}
+input,select,textarea{font-family:var(--font);font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;width:100%;background:#fff;color:var(--text)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--brand-mid);outline-offset:-1px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--bg);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:9px 14px}
+td{padding:9px 14px;border-top:1px solid var(--border-light)}
+
+/* layout */
+#app{display:none;min-height:100vh}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:212px;background:#1a0e08;color:#fff;padding:18px 0;z-index:50;overflow-y:auto}
+.sidebar .logo{padding:0 18px 16px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:10px}
+.sidebar .logo .t{font-weight:800;font-size:15px;letter-spacing:.02em}
+.sidebar .logo .s{font-size:10.5px;color:#f59e0b;letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:11px 18px;color:rgba(255,255,255,.68);font-size:13.5px;font-weight:500;border:none;background:none;width:100%;text-align:left}
+.nav-item i{font-size:18px}
+.nav-item.active{color:#fff;background:rgba(234,88,12,.22);border-right:3px solid var(--brand-mid)}
+.main{margin-left:212px;padding:0 1.5rem 5rem}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 0 12px;gap:10px;flex-wrap:wrap}
+.topbar h2{font-size:19px;font-weight:700}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.25rem;margin-bottom:.9rem}
+.btn-primary{background:var(--brand-mid);color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13.5px;font-weight:600}
+.btn-primary:disabled{opacity:.6}
+.btn-sm{background:#fff;border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--text)}
+.btn-danger{color:var(--danger);border-color:#fecaca}
+.btn-excel{border-color:#16a34a;color:#16a34a}
+.tab-bar{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
+.tab{padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--border);background:#fff;border-radius:8px;color:var(--muted)}
+.tab.active{background:var(--brand-mid);border-color:var(--brand-mid);color:#fff}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.stat-value{font-size:20px;font-weight:800;margin-top:3px}
+.empty-state{text-align:center;color:var(--muted);padding:2.2rem 1rem;font-size:13.5px}
+.empty-state i{display:block;font-size:30px;margin-bottom:8px;opacity:.5}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
+.form-row{display:grid;gap:10px}
+.cols-2{grid-template-columns:1fr 1fr}
+.cols-3{grid-template-columns:1fr 1fr 1fr}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
+.pill.green{background:var(--success-bg);color:var(--success)}
+.pill.red{background:var(--danger-bg);color:var(--danger)}
+.pill.amber{background:#fffbeb;color:var(--warning)}
+
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px 12px;overscroll-behavior:contain}
+.modal{background:#fff;border-radius:14px;width:560px;max-width:100%;display:flex;flex-direction:column;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px)}
+.modal-body{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1}
+.modal-header,.modal-footer{flex-shrink:0}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.modal-header h3{font-size:15px;font-weight:700}
+.modal-body{padding:16px 18px}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;padding:13px 18px;border-top:1px solid var(--border)}
+.modal-footer button{padding:9px 16px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:13px}
+.modal-footer .btn-primary{background:var(--brand-mid);color:#fff;border:none}
+
+/* setup + login */
+.gate{min-height:100vh;display:none;align-items:center;justify-content:center;padding:20px;background:linear-gradient(160deg,#1a0e08,#7c2d12)}
+.gate .box{background:#fff;border-radius:16px;padding:28px;width:430px;max-width:100%}
+.gate h1{font-size:20px;margin-bottom:4px}
+.gate .sub{font-size:12.5px;color:var(--muted);margin-bottom:18px}
+.config-input{font-family:monospace;font-size:11.5px;min-height:130px}
+#setup-error,#login-error{color:var(--danger);font-size:12.5px;margin-top:8px;min-height:16px}
+
+/* mobile */
+.mobile-tabs{display:none}
+@media(max-width:860px){
+  .sidebar{display:none}
+  .main{margin-left:0;padding:0 .9rem 6rem}
+  .mobile-tabs{display:flex;position:fixed;bottom:0;left:0;right:0;background:#1a0e08;z-index:60;justify-content:space-around;padding:6px 2px calc(6px + env(safe-area-inset-bottom))}
+  .mobile-tabs button{background:none;border:none;color:rgba(255,255,255,.6);font-size:9.5px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 6px}
+  .mobile-tabs button i{font-size:19px}
+  .mobile-tabs button.active{color:#fb923c}
+  .cols-3{grid-template-columns:1fr}
+  .cols-2{grid-template-columns:1fr}
+}
+@media print{
+  .sidebar,.mobile-tabs,.topbar button,.no-print{display:none!important}
+  .main{margin:0}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div class="gate" id="setup-screen">
+  <div class="box">
+    <h1>⚡ BKN Electric Poles — Kunigal</h1>
+    <div class="sub">Paste the Firebase config of the <strong>Poles project</strong> (its own project — separate users and data from the Pipes app).</div>
+    <div class="form-group">
+      <label>Firebase config (JSON)</label>
+      <textarea class="config-input" id="firebase-config" placeholder='{"apiKey":"AIzaSy...","authDomain":"...","projectId":"...","appId":"..."}'></textarea>
+      <div id="setup-error"></div>
+    </div>
+    <button class="btn-primary" style="width:100%" onclick="saveConfig()">Connect</button>
+  </div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div class="gate" id="login-screen">
+  <div class="box">
+    <h1>⚡ BKN Electric Poles — Kunigal</h1>
+    <div class="sub">Sign in to continue</div>
+    <div class="form-group"><label>Email</label><input type="email" id="login-email" autocomplete="username"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="login-pass" autocomplete="current-password"></div>
+    <div id="login-error"></div>
+    <button class="btn-primary" style="width:100%" onclick="doLogin()">Sign in</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="sidebar">
+    <div class="logo"><div class="t">BKN ELECTRIC POLES</div><div class="s">Kunigal Unit</div></div>
+    <div id="nav"></div>
+  </div>
+  <div class="main">
+    <div class="topbar"><h2 id="page-title">Dashboard</h2><div id="topbar-action"></div></div>
+    <div id="content"></div>
+  </div>
+  <div class="mobile-tabs" id="mobile-tabs"></div>
+</div>
+<div id="modal-container"></div>
+
+<script>
+// ── CONSTANTS ────────────────────────────────────────────────────────────────
+const POLE_TYPES = ['8 Mtr', '200 KG', '300 KG'];
+const MATERIALS = [
+  { id:'msand',  label:'M-Sand',              unit:'Tons' },
+  { id:'cement', label:'Cement',              unit:'Bags' },
+  { id:'jelly20',label:'20mm Jelly',          unit:'Tons' },
+  { id:'jelly6', label:'6mm Jelly',           unit:'Tons' },
+  { id:'wire4',  label:'4mm Prestressed Wire',unit:'Kg'   },
+];
+const PARTNERS = ['Bhoomika', 'Balakrishna'];
+const PAGES = [
+  { id:'dashboard', label:'Dashboard', icon:'ti-layout-dashboard' },
+  { id:'production',label:'Production',icon:'ti-tools' },
+  { id:'sales',     label:'Sales',     icon:'ti-clipboard-list' },
+  { id:'materials', label:'Purchases', icon:'ti-shopping-cart' },
+  { id:'advances',  label:'Advances',  icon:'ti-wallet' },
+  { id:'gstbilling',label:'GST Bills', icon:'ti-file-invoice' },
+  { id:'settings',  label:'Settings',  icon:'ti-adjustments-horizontal' },
+];
+const COL_PREFIX = 'poles_';   // keeps this app's data separate inside the same Firebase project
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let firestoreDb = null;
+let currentPage = 'dashboard';
+let cache = { production:[], orders:[], materials:[], advances:[], gst_invoices:[], pole_rates:{}, mat_rates:{}, gst_profile:{}, opening:{} };
+let listeners = [];
+let salesTab = 'orders';
+let salesRange = 'all';        // all | month | lastmonth | year | custom
+let salesFrom = '', salesTo = '';   // used when salesRange==='custom' (YYYY-MM-DD)
+let prodRange = 'all', prodFrom = '', prodTo = '';   // Production timeframe filter
+let purRange  = 'all', purFrom  = '', purTo  = '';   // Purchases timeframe filter
+let advTab = 'labour';
+let advMonth = ''; // '' = all months, else 'YYYY-MM'
+let gstFromDate = '', gstToDate = '', gstInvoiceFilter = '';
+let _gstRowSeq = 0;
+
+// ── UTILS ────────────────────────────────────────────────────────────────────
+function today(){ return new Date().toISOString().slice(0,10); }
+function fmt(n){ n = Math.round(Number(n)||0); return n.toLocaleString('en-IN'); }
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtDate(s){ if(!s) return '—'; const d=new Date(s+'T00:00:00'); return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+// Surface any silent async failure (e.g. Firestore permission-denied) instead of failing invisibly
+window.addEventListener('unhandledrejection', e => {
+  const msg = (e.reason && e.reason.message) || String(e.reason||'Unknown error');
+  if(/permission|denied|insufficient/i.test(msg)) alert('Database permission error: '+msg+'\n\nOpen Firebase console → Firestore → Rules and allow signed-in users (see setup steps).');
+  else if(/network|unavailable|offline/i.test(msg)) console.warn('Network issue:', msg);
+  else alert('Error: '+msg);
+});
+function col(name){ return firestoreDb.collection(COL_PREFIX+name); }
+function modal(html){ document.getElementById('modal-container').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()">${html}</div>`; }
+function closeModal(){ document.getElementById('modal-container').innerHTML=''; }
+function inRange(d,a,b){ return d>=a && d<=b; }
+function monthEnd(ym){ const [y,m]=ym.split('-').map(Number); const d=new Date(y,m,0); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function gstFinYear(dateStr){ const d=new Date(dateStr+'T00:00:00'); const y=d.getFullYear(), m=d.getMonth()+1; return m>=4 ? `${y}-${String(y+1).slice(-2)}` : `${y-1}-${String(y).slice(-2)}`; }
+function downloadCSV(filename, headers, rows){
+  const escCell = v => { const s=String(v??''); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  const lines = [headers.map(escCell).join(',')].concat(rows.map(r=>r.map(escCell).join(',')));
+  const blob = new Blob(['﻿'+lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
+}
+function numToWords(n){
+  const ones=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  function c(x){ if(x===0)return''; if(x<20)return ones[x]+' '; if(x<100)return tens[Math.floor(x/10)]+' '+(ones[x%10]?ones[x%10]+' ':''); if(x<1000)return ones[Math.floor(x/100)]+' Hundred '+c(x%100); if(x<100000)return c(Math.floor(x/1000))+'Thousand '+c(x%1000); if(x<10000000)return c(Math.floor(x/100000))+'Lakh '+c(x%100000); return c(Math.floor(x/10000000))+'Crore '+c(x%10000000); }
+  n=Math.round(Number(n)||0); if(n===0)return 'Zero Rupees Only'; return (c(n).trim())+' Rupees Only';
+}
+
+// ── FIREBASE / AUTH / DATA ───────────────────────────────────────────────────
+function saveConfig(){
+  const raw = document.getElementById('firebase-config').value.trim();
+  // Accept any paste format: full "const firebaseConfig = {...};" block, JS object, or JSON
+  const a = raw.indexOf('{'), b = raw.lastIndexOf('}');
+  if(a === -1 || b === -1 || b <= a){ showSetupErr('Paste the full firebaseConfig { ... } block from Firebase console'); return; }
+  const objText = raw.slice(a, b+1);
+  let cfg;
+  try { cfg = (new Function('return ('+objText+')'))(); }
+  catch(e){ try { cfg = JSON.parse(objText); } catch(e2){ showSetupErr('Cannot parse config: '+e2.message); return; } }
+  if(!cfg.projectId || !cfg.apiKey){ showSetupErr('Missing projectId or apiKey'); return; }
+  localStorage.setItem('bknpoles_firebase_config', JSON.stringify(cfg));
+  launchApp(cfg);
+}
+function showSetupErr(m){ document.getElementById('setup-error').textContent = m; }
+function launchApp(cfg){
+  try {
+    if(!firebase.apps.length) firebase.initializeApp(cfg);
+    firestoreDb = firebase.firestore();
+    firestoreDb.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+    document.getElementById('setup-screen').style.display='none';
+    firebase.auth().onAuthStateChanged(user=>{
+      if(user){ document.getElementById('login-screen').style.display='none'; startApp(); }
+      else { document.getElementById('login-screen').style.display='flex'; document.getElementById('app').style.display='none'; }
+    });
+  } catch(e){ document.getElementById('setup-screen').style.display='flex'; showSetupErr(e.message); }
+}
+async function doLogin(){
+  const em=document.getElementById('login-email').value.trim(), pw=document.getElementById('login-pass').value;
+  try { await firebase.auth().signInWithEmailAndPassword(em,pw); }
+  catch(e){ document.getElementById('login-error').textContent = e.message; }
+}
+function doLogout(){ firebase.auth().signOut(); }
+
+async function startApp(){
+  document.getElementById('app').style.display='block';
+  const names = ['production','orders','materials','advances','gst_invoices'];
+  const metaDocs = ['pole_rates','mat_rates','gst_profile','opening'];
+  await Promise.all([
+    ...names.map(async n=>{ try{ const s=await col(n).get(); cache[n]=s.docs.map(d=>({id:d.id,...d.data()})); }catch(e){ cache[n]=[]; } }),
+    ...metaDocs.map(async n=>{ try{ const d=await firestoreDb.collection(COL_PREFIX+'meta').doc(n).get(); cache[n]=d.exists?d.data():{}; }catch(e){ cache[n]={}; } }),
+  ]);
+  names.forEach(n=>{
+    const unsub = col(n).onSnapshot(s=>{ cache[n]=s.docs.map(d=>({id:d.id,...d.data()})); goto(currentPage,true); },()=>{});
+    listeners.push(unsub);
+  });
+  metaDocs.forEach(n=>{
+    const unsub = firestoreDb.collection(COL_PREFIX+'meta').doc(n).onSnapshot(d=>{ cache[n]=d.exists?d.data():{}; },()=>{});
+    listeners.push(unsub);
+  });
+  renderNav(); goto('dashboard');
+}
+function saveMeta(name){ return firestoreDb.collection(COL_PREFIX+'meta').doc(name).set(cache[name]||{}); }
+
+// ── NAV ──────────────────────────────────────────────────────────────────────
+function renderNav(){
+  document.getElementById('nav').innerHTML = PAGES.map(p=>`
+    <button class="nav-item ${currentPage===p.id?'active':''}" onclick="goto('${p.id}')"><i class="ti ${p.icon}"></i>${p.label}</button>`).join('');
+  const mob = [PAGES[0],PAGES[1],PAGES[2],PAGES[4],PAGES[5]];
+  document.getElementById('mobile-tabs').innerHTML = mob.map(p=>`
+    <button class="${currentPage===p.id?'active':''}" onclick="goto('${p.id}')"><i class="ti ${p.icon}"></i>${p.label}</button>`).join('')
+    + `<button class="${currentPage==='materials'||currentPage==='settings'?'active':''}" onclick="goto(currentPage==='materials'?'settings':'materials')"><i class="ti ti-dots"></i>More</button>`;
+}
+function goto(page, keepScroll){
+  currentPage = page;
+  renderNav();
+  document.getElementById('page-title').textContent = (PAGES.find(p=>p.id===page)||{}).label || '';
+  document.getElementById('topbar-action').innerHTML = '';
+  if(!keepScroll) window.scrollTo(0,0);
+  ({dashboard:renderDashboard, production:renderProduction, sales:renderSales,
+    materials:renderMaterials, advances:renderAdvances, gstbilling:renderGST, settings:renderSettings}[page]||renderDashboard)();
+}
+
+// ── STOCK HELPERS ────────────────────────────────────────────────────────────
+function poleStock(){
+  const stock = {};
+  POLE_TYPES.forEach(t=>{
+    const open = Number((cache.opening||{})[t])||0;
+    const made = cache.production.reduce((s,p)=>s+(Number(p.poles&&p.poles[t])||0),0);
+    const sold = cache.orders.filter(o=>o.status==='delivered').reduce((s,o)=>s+(Number(o.poles&&o.poles[t])||0),0);
+    stock[t] = open + made - sold;
+  });
+  return stock;
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────────────────────
+function renderDashboard(){
+  const mon = today().slice(0,7);
+  const stock = poleStock();
+  const monProd = {}; POLE_TYPES.forEach(t=>monProd[t]=0);
+  cache.production.filter(p=>(p.date||'').startsWith(mon)).forEach(p=>POLE_TYPES.forEach(t=>monProd[t]+=(Number(p.poles&&p.poles[t])||0)));
+  const monOrders = cache.orders.filter(o=>(o.orderDate||'').startsWith(mon));
+  const monSalesTotal = monOrders.reduce((s,o)=>s+(Number(o.total)||0),0);
+  const allSalesTotal = cache.orders.reduce((s,o)=>s+(Number(o.total)||0),0);
+  const receivable = cache.orders.reduce((s,o)=>s+Math.max(0,Number(o.balance)||0),0);
+  const pending = cache.orders.filter(o=>o.status!=='delivered');
+  const partnerTotals = PARTNERS.map(p=>({
+    name:p, total: cache.advances.filter(a=>a.type==='partner'&&a.person===p).reduce((s,a)=>s+(Number(a.amo
